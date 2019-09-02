@@ -3,6 +3,7 @@
 微服务
 
 ## 功能
+课件 demo 目录
 例：
     
     @RequestMapping("/test")
@@ -21,8 +22,7 @@
     TestController controller = Proxy.newProxy(RpcProxy.class.getClassLoad(), new Class[] ......)
     controller.doTest("name"); 代理将执行一次远程调用，并反序列化结果。
 
-## 配置
-动态代理需要传入一个 RpcConfig 的实例，一个接口提供方的域名。
-### RpcConfig
-传入一个 HttpClient 的实例；
-传入一个用于序列化和反序列化的 ObjectMapper
+
+## 安全性
+1. 使用局域网，只能内部访问
+2. 服务端提供的接口，需要请求端传入公钥，做非对称性验证

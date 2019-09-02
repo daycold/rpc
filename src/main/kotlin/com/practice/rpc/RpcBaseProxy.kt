@@ -1,5 +1,7 @@
 package com.practice.rpc
 
+import com.practice.rpc.model.HttpClientManager
+import com.practice.rpc.model.JsonMapper
 import org.apache.commons.io.IOUtils
 import org.apache.http.HttpEntity
 import org.apache.http.HttpResponse
@@ -22,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RequestParam
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.StringWriter
 import java.lang.reflect.InvocationHandler
@@ -34,15 +35,14 @@ import java.net.URI
 /**
  * @author Stefan Liu
  */
-class RpcBaseProxy(clazz: Class<*>, rpcConfig: RpcConfig, endPoint: String) : InvocationHandler {
-    private val httpClient = rpcConfig.getHttpClient()
-    private val objectMapper = rpcConfig.getObjectMapper()
+class RpcBaseProxy(clazz: Class<*>, private val httpClientManager: HttpClientManager,
+        private val jsonMapper: JsonMapper, endPoint: String) : InvocationHandler {
     private val basePath: String = appendPath(endPoint,
             clazz.getAnnotation(RequestMapping::class.java)?.path?.get(0) ?: "")
 
     override fun invoke(proxy: Any?, method: Method, args: Array<out Any?>?): Any {
         val request = buildBaseRequest(method, args)
-        val response = httpClient.execute(request)
+        val response = httpClientManager.getClient().execute(request)
         return parseResponse(response, Unit.javaClass)
     }
 
@@ -89,7 +89,8 @@ class RpcBaseProxy(clazz: Class<*>, rpcConfig: RpcConfig, endPoint: String) : In
             Void.TYPE -> Unit
             String::class,
             String::class.java -> entity.content.convertToString()
-            else -> objectMapper.readValue(entity.content, objectMapper.typeFactory.constructType(returnType))
+//            else -> objectMapper.readValue(entity.content, objectMapper.typeFactory.constructType(returnType))
+            else -> jsonMapper.deserializeInputStream(entity.content, returnType)
         }
     }
 
@@ -121,7 +122,7 @@ class RpcBaseProxy(clazz: Class<*>, rpcConfig: RpcConfig, endPoint: String) : In
                 return when (arg) {
                     null -> null
                     is String -> ByteArrayEntity(arg.toByteArray(Charsets.UTF_8), ContentType.APPLICATION_JSON)
-                    else -> ByteArrayEntity(objectMapper.writeValueAsBytes(arg), ContentType.APPLICATION_JSON)
+                    else -> ByteArrayEntity(jsonMapper.writeArrayAsBytes(arg), ContentType.APPLICATION_JSON)
                 }
             }
         }
